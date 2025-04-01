@@ -30,4 +30,29 @@ public static class MediatorExtensions
             new NotificationDispatcher<TMessage>(),
             message,
             cancellationToken);
+
+    public static IMediator AddPipelines(
+        this IMediator mediator)
+    {
+        return new PipelineMediator(mediator);
+    }
+}
+
+class PipelineMediator : IMediator
+{
+    readonly IMediator Mediator;
+
+    public PipelineMediator(
+        IMediator mediator)
+    {
+        Mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
+    }
+
+    public TReturn Dispatch<TReturn>(Func<IServiceProvider, IDispatcher<TReturn>> factory, object input, CancellationToken cancellationToken)
+    {
+        return Mediator.Dispatch(
+            new PipelineDispatcher<TReturn>(factory), 
+            input, 
+            cancellationToken);
+    }
 }

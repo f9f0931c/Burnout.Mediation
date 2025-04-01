@@ -46,6 +46,47 @@ public class Test
             return Task.FromResult(new Pong("Pong"));
         }
     }
+    class InnerPipelineStep<TResponse> : IPipelineStep<Task<TResponse>> 
+    {
+        readonly RequestEventLog _messages;
+
+        public InnerPipelineStep(RequestEventLog messages) 
+        {
+            _messages = messages ?? throw new ArgumentNullException(nameof(messages));
+        }
+
+        public async Task<TResponse> Handle(object input, Func<object, CancellationToken, Task<TResponse>> next, CancellationToken cancellationToken)
+        {                
+            _messages.Log("Inner Pipe Entering");
+            var response = await next(input, cancellationToken)
+                .ConfigureAwait(false);
+            _messages.Log("Inner Pipe Exiting");
+            return response;
+        }
+    }
+
+    interface IPipelineStepProvider
+    {
+        bool TryGetStep<TReturn>(IServiceProvider services, out IPipelineStep<TReturn> step);
+    }
+
+    private class OuterPipelineStep<TResponse> : IPipelineStep<Task<TResponse>> 
+    {
+        readonly RequestEventLog _messages;
+
+        public OuterPipelineStep(RequestEventLog messages) {
+            _messages = messages ?? throw new ArgumentNullException(nameof(messages));
+        }
+
+        public async Task<TResponse> Handle(object input, Func<object, CancellationToken, Task<TResponse>> next, CancellationToken cancellationToken)
+        {
+            _messages.Log("Outer Pipe Entering");
+            var response = await next(input, cancellationToken)
+                .ConfigureAwait(false);
+            _messages.Log("Outer Pipe Exiting");
+            return response;
+        }
+    }
 
     class RequestEventLog 
     {
@@ -58,12 +99,22 @@ public class Test
         }
     }
 
-    IServiceProvider GetRequestServiceProvider() 
-    {
+    IServiceProvider GetRequestServiceProvider()
+        {
         return new ServiceCollection()
             .AddTransient<IMediator, Mediator>()
+            .AddMediatorConfiguration(
+                new BasicMediationRegistrar(),
+                builder => {
+                    builder
+                        .AddTypes(Assembly.GetExecutingAssembly().GetTypes())
+                        .AddNotifications(x => {})
+                        .AddRequests(x => {});
+                })
             .AddSingleton<RequestEventLog>()
             .AddTransient<IRequestHandler<Ping, Pong>, RequestHandlerTest>()
+            .AddTransient(typeof(IPipelineStep<>), typeof(OuterPipelineStep<>))
+            .AddTransient(typeof(IPipelineStep<>), typeof(InnerPipelineStep<>))
             .BuildServiceProvider();
     }
 
