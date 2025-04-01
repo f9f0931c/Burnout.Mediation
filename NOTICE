@@ -1,0 +1,9 @@
+The works contained in this project are heavily derived from those found here: https://github.com/jbogard/MediatR
+
+Classes have been simplified to their core in an attempt to avoid the identification interfaces that were originally needed to be placed on the requests/notification objects. This was done in an attempt to simplify those models and reduce the need to reference the MediatR in libraries that may be distributed to consumers who do not need to use the package.
+
+Registration of the handlers has also been removed. Having the registration of the handlers inside this set of libraries makes it arbitrary as to how they are registered, this should instead be done via other means. If the consumer of this software wants to automate the registration of their handlers, there are other packages elswhere available to do so.
+
+Pipelines have also been removed as they introduce complications and are not central to the central mediation pattern. They can be added through other means as will be documented.
+
+Different types of objects have also been moved to other nuget packages that can be included at will. This was originally intended to provide more modularity as downstream developers can easily add new kinds of handlers. However, it's possible this is a bit of an anti-pattern and the various packages may be eventually included in the core Mediation package.
