@@ -1,0 +1,5 @@
+<Project>
+    <PropertyGroup>
+        <VersionSuffix>alpha.0</VersionSuffix>
+    </PropertyGroup>
+</Project>

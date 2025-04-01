@@ -1,7 +1,6 @@
 <Project>
     <PropertyGroup>
         <LangVersion>latest</LangVersion>
-        <VersionSuffix>alpha.0</VersionSuffix>
         <RootNamespace>Burnout.$([System.Text.RegularExpressions.Regex]::Replace("$(MSBuildProjectName)", ".Abstractions$", ""))</RootNamespace>
     </PropertyGroup>
 </Project>
