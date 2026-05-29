@@ -1,5 +1,7 @@
 ﻿using Burnout.Mediation.Notifications;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,26 +12,42 @@ public static class MediatorExtensions
 {
     static readonly Type _definition = typeof(NotificationDispatcher<>);
 
-    public static Task SendAsync(
-        this IMediator mediator,
-        object message,
-        CancellationToken cancellationToken = default) =>
-        mediator.Dispatch(
-            (IDispatcher<Task>)
-            Activator.CreateInstance(
-                _definition
-                    .MakeGenericType(message.GetType())),
-            message,
-            cancellationToken);
+	static async Task PublishAsync(
+		this IMediator mediator,
+		IDispatcher2<byte> dispatcher,
+		object message,
+		CancellationToken cancellationToken = default)
+	{
+		var enumerator = mediator
+			.Dispatch(dispatcher, message, cancellationToken)
+			.GetAsyncEnumerator();
 
-    public static Task SendAsync<TMessage>(
-        this IMediator mediator,
-        TMessage message,
-        CancellationToken cancellationToken = default) =>
-        mediator.Dispatch(
-            new NotificationDispatcher<TMessage>(),
-            message,
-            cancellationToken);
+		// If there's a result then something has gone wrong
+		if (await enumerator.MoveNextAsync())
+			throw new Exception();
+	}
+
+	public static Task PublishAsync(
+		this IMediator mediator,
+		object message,
+		CancellationToken cancellationToken = default)
+	{
+		var dispatcher = (IDispatcher2<byte>)
+			Activator.CreateInstance(
+				_definition.MakeGenericType(message.GetType()));
+
+		return mediator.PublishAsync(dispatcher, message, cancellationToken);
+	}
+
+	public static Task PublishAsync<TMessage>(
+		this IMediator mediator,
+		TMessage message,
+		CancellationToken cancellationToken = default)
+	{
+		var dispatcher = new NotificationDispatcher<TMessage>();
+		return mediator.PublishAsync(dispatcher, message, cancellationToken);
+	}
+
 
     public static IMediator AddPipelines(
         this IMediator mediator)
@@ -48,10 +66,10 @@ class PipelineMediator : IMediator
         Mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
     }
 
-    public TReturn Dispatch<TReturn>(Func<IServiceProvider, IDispatcher<TReturn>> factory, object input, CancellationToken cancellationToken)
+    public IAsyncEnumerable<TRecord> Dispatch<TRecord>(Func<IServiceProvider, IDispatcher2<TRecord>> factory, object input, CancellationToken cancellationToken)
     {
-        return Mediator.Dispatch(
-            new PipelineDispatcher<TReturn>(factory), 
+		return Mediator.Dispatch(
+            new PipelineDispatcher<TRecord>(factory), 
             input, 
             cancellationToken);
     }

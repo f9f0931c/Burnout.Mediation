@@ -9,35 +9,19 @@ using System.Threading.Tasks;
 
 namespace Burnout.Mediation.Notifications;
 
-class NotificationDispatcher<TMessage> : IDispatcher<Task>
+class NotificationDispatcher<TMessage> : IDispatcher2<byte>
 {
-    public async Task Dispatch(
-        IServiceProvider services,
-        object input,
-        CancellationToken cancellationToken)
+    public async IAsyncEnumerable<byte> Dispatch(IServiceProvider services, object input, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var message = (TMessage)input;
-        foreach (var handler in services.GetServices<INotificationHandler<TMessage>>())
-            await handler
-                .HandleAsync(message, cancellationToken)
-                .ConfigureAwait(false);
-    }
-}
+		var message = (TMessage)input;
+		var handlers = (IEnumerable<INotificationHandler<TMessage>>)services
+			.GetService(typeof(IEnumerable<INotificationHandler<TMessage>>));
 
-interface IStreamRequestHandler<TRequest, TRecord>
-{
-    IAsyncEnumerable<TRecord> StreamAsync(TRequest request, CancellationToken cancellationToken);
-}
-
-class StreamDispatcher<TRequest, TRecord> : IDispatcher<IAsyncEnumerable<TRecord>>
-{
-    public IAsyncEnumerable<TRecord> Dispatch(
-        IServiceProvider services,
-        object input,
-        CancellationToken cancellationToken)
-    {
-        var handler = services.GetRequiredService<IStreamRequestHandler<TRequest, TRecord>>();
-        return handler.StreamAsync((TRequest)input, cancellationToken);
+		foreach (var handler in handlers ?? [])
+			await handler
+				.HandleAsync(message, cancellationToken)
+				.ConfigureAwait(false);
+		yield break;
     }
 }
 
@@ -46,49 +30,44 @@ public interface IPipelineStepFactory<TReturn>
     IPipelineStep<TReturn> Create();
 }
 
-public interface IPipelineStep<TReturn>
+public interface IPipelineStep<TRecord>
 {
-    TReturn Handle(object input, Func<object, CancellationToken, TReturn> next, CancellationToken cancellationToken);
+    IAsyncEnumerable<TRecord> Handle(object input, Func<object, CancellationToken, IAsyncEnumerable<TRecord>> next, CancellationToken cancellationToken);
 }
 
-class NotificationLoggingStep<T> : IPipelineStep<Task>
+public delegate IAsyncEnumerable<TRecord> PipelineStepHandle<TRecord>(object input, CancellationToken cancellationToken);
+
+public interface IPipelineStep2<TRecord>
 {
-    public async Task Handle(object input, Func<object, CancellationToken, Task> next, CancellationToken cancellationToken)
+	IAsyncEnumerable<TRecord> Handle(object input, PipelineStepHandle<TRecord> next, CancellationToken cancellationToken);
+}
+
+class LoggingStep<T> : IPipelineStep2<T>
+{
+    public async IAsyncEnumerable<T> Handle(object input, PipelineStepHandle<T> next, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        await next(input, cancellationToken);
+		// Log something here for entry
+		await foreach (var record in next(input, cancellationToken))
+			// Log something here for each record (streams/requests)
+			yield return record;
+
+		// Log something here at exit
     }
 }
 
-class ValueLoggingStep<T> : IPipelineStep<Task<T>>
+class PipelineDispatcher<T> : IDispatcher2<T>
 {
-    public async Task<T> Handle(object input, Func<object, CancellationToken, Task<T>> next, CancellationToken cancellationToken)
-    {
-        return await next(input, cancellationToken);
-    }
-}
-
-class StreamLoggingStep<T> : IPipelineStep<IAsyncEnumerable<T>>
-{
-    public async IAsyncEnumerable<T> Handle(object input, Func<object, CancellationToken, IAsyncEnumerable<T>> next, [EnumeratorCancellation] CancellationToken cancellationToken)
-    {
-        await foreach (var record in next(input, cancellationToken))
-            yield return record;
-    }
-}
-
-class PipelineDispatcher<T> : IDispatcher<T>
-{
-    readonly Func<IServiceProvider, IDispatcher<T>> _factory;
+    readonly Func<IServiceProvider, IDispatcher2<T>> _factory;
 
     public PipelineDispatcher(
-        Func<IServiceProvider, IDispatcher<T>> factory)
+        Func<IServiceProvider, IDispatcher2<T>> factory)
     {
         _factory = factory ?? throw new ArgumentNullException(nameof(factory));
     }
 
-    public T Dispatch(IServiceProvider serviceProvider, object input, CancellationToken cancellationToken)
+    public IAsyncEnumerable<T> Dispatch(IServiceProvider serviceProvider, object input, CancellationToken cancellationToken)
     {
-        var steps = serviceProvider.GetServices<IPipelineStep<T>>();
+        var steps = (IEnumerable<IPipelineStep<T>>)serviceProvider.GetService(typeof(IEnumerable<IPipelineStep<T>>));
         var handler = _factory(serviceProvider);
         var pipeline = steps.Reverse().Aggregate(
             (object value, CancellationToken cancellation) => handler.Dispatch(serviceProvider, input, cancellation),

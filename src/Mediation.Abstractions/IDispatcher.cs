@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace Burnout.Mediation;
 
-public interface IDispatcher<out TReturn>
+public interface IDispatcher2<TResult>
 {
-    TReturn Dispatch(IServiceProvider serviceProvider, object input, CancellationToken cancellationToken);
+	IAsyncEnumerable<TResult> Dispatch(IServiceProvider services, object input, CancellationToken cancellationToken);
 }

@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace Burnout.Mediation;
 
-public interface IDispatcherProvider<TReturn>
+public interface IDispatcherProvider<TRecord>
 {
-    IDispatcher<TReturn> Create(IServiceProvider services);
+    IDispatcher2<TRecord> Create(IServiceProvider services);
 }

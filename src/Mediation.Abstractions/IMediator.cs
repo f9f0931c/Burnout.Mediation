@@ -1,13 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace Burnout.Mediation;
 
 public interface IMediator 
 {
-    TReturn Dispatch<TReturn>(
-        Func<IServiceProvider, IDispatcher<TReturn>> factory,
-        object input,
-        CancellationToken cancellationToken);
+	IAsyncEnumerable<TRecord> Dispatch<TRecord>(
+		Func<IServiceProvider, IDispatcher2<TRecord>> factory,
+		object input,
+		CancellationToken cancellationToken);
 }

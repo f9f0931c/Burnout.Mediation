@@ -8,11 +8,11 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
-using Xunit.Abstractions;
+using System.Runtime.CompilerServices;
 
 namespace Burnout.Mediation.Tests;
 
-public class Test 
+public class Test
 {
     struct Ping 
     {
@@ -46,7 +46,7 @@ public class Test
             return Task.FromResult(new Pong("Pong"));
         }
     }
-    class InnerPipelineStep<TResponse> : IPipelineStep<Task<TResponse>> 
+    class InnerPipelineStep<TResponse> : IPipelineStep<TResponse> 
     {
         readonly RequestEventLog _messages;
 
@@ -55,13 +55,12 @@ public class Test
             _messages = messages ?? throw new ArgumentNullException(nameof(messages));
         }
 
-        public async Task<TResponse> Handle(object input, Func<object, CancellationToken, Task<TResponse>> next, CancellationToken cancellationToken)
+        public async IAsyncEnumerable<TResponse> Handle(object input, Func<object, CancellationToken, IAsyncEnumerable<TResponse>> next, [EnumeratorCancellation] CancellationToken cancellationToken)
         {                
             _messages.Log("Inner Pipe Entering");
-            var response = await next(input, cancellationToken)
-                .ConfigureAwait(false);
+			await foreach(var record in next(input, cancellationToken))
+				yield return record;
             _messages.Log("Inner Pipe Exiting");
-            return response;
         }
     }
 
@@ -70,7 +69,7 @@ public class Test
         bool TryGetStep<TReturn>(IServiceProvider services, out IPipelineStep<TReturn> step);
     }
 
-    private class OuterPipelineStep<TResponse> : IPipelineStep<Task<TResponse>> 
+    private class OuterPipelineStep<TResponse> : IPipelineStep<TResponse> 
     {
         readonly RequestEventLog _messages;
 
@@ -78,13 +77,12 @@ public class Test
             _messages = messages ?? throw new ArgumentNullException(nameof(messages));
         }
 
-        public async Task<TResponse> Handle(object input, Func<object, CancellationToken, Task<TResponse>> next, CancellationToken cancellationToken)
+        public async IAsyncEnumerable<TResponse> Handle(object input, Func<object, CancellationToken, IAsyncEnumerable<TResponse>> next, [EnumeratorCancellation] CancellationToken cancellationToken)
         {
             _messages.Log("Outer Pipe Entering");
-            var response = await next(input, cancellationToken)
-                .ConfigureAwait(false);
+			await foreach (var record in next(input, cancellationToken))
+				yield return record;
             _messages.Log("Outer Pipe Exiting");
-            return response;
         }
     }
 
@@ -103,14 +101,14 @@ public class Test
         {
         return new ServiceCollection()
             .AddTransient<IMediator, Mediator>()
-            .AddMediatorConfiguration(
-                new BasicMediationRegistrar(),
-                builder => {
-                    builder
-                        .AddTypes(Assembly.GetExecutingAssembly().GetTypes())
-                        .AddNotifications(x => {})
-                        .AddRequests(x => {});
-                })
+//             .AddMediatorConfiguration(
+//                 new BasicMediationRegistrar(),
+//                 builder => {
+//                     builder
+//                         .AddTypes(Assembly.GetExecutingAssembly().GetTypes())
+//                         .AddNotifications(x => {})
+//                         .AddRequests(x => {});
+//                 })
             .AddSingleton<RequestEventLog>()
             .AddTransient<IRequestHandler<Ping, Pong>, RequestHandlerTest>()
             .AddTransient(typeof(IPipelineStep<>), typeof(OuterPipelineStep<>))
@@ -126,8 +124,7 @@ public class Test
         var mediator = provider.GetRequiredService<IMediator>();
         var result = await mediator
 //                .AddPipelines()
-            .RequestAsync<Ping, Pong>(new Ping("Ping"))
-            .ConfigureAwait(false);
+            .RequestAsync<Ping, Pong>(new Ping("Ping"), TestContext.Current.CancellationToken);
         Assert.IsType<Pong>(result);
         Assert.Equal("Pong", result.Message);
         // var log = provider.GetRequiredService<RequestEventLog>();

@@ -1,13 +1,12 @@
-﻿using System;
+﻿using System.Collections.Generic;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace Burnout.Mediation; 
 
 public static class MediatorExtensions {
-    public static TReturn Dispatch<TReturn>(
+	public static IAsyncEnumerable<TRecord> Dispatch<TRecord>(
         this IMediator mediator,
-        IDispatcherProvider<TReturn> factory,
+        IDispatcherProvider<TRecord> factory,
         object input,
         CancellationToken cancellationToken) =>
         mediator.Dispatch(
@@ -15,13 +14,13 @@ public static class MediatorExtensions {
             input,
             cancellationToken);
 
-    public static TReturn Dispatch<TReturn>(
-        this IMediator mediator,
-        IDispatcher<TReturn> dispatcher,
-        object input,
-        CancellationToken cancellationToken) =>
-        mediator.Dispatch(
-            services => dispatcher,
-            input,
-            cancellationToken);
+	public static IAsyncEnumerable<TRecord> Dispatch<TRecord>(
+		this IMediator mediator,
+		IDispatcher2<TRecord> dispatcher,
+		object input,
+		CancellationToken cancellationToken) =>
+		mediator.Dispatch(
+			services => dispatcher,
+			input,
+			cancellationToken);
 }
