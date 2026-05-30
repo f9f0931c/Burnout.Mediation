@@ -12,7 +12,7 @@ public static class MediatorExtensions
 
 	static async Task SendAsync<TRequest>(
 		this IMediator mediator,
-		IDispatcher2<byte> dispatcher,
+		IDispatcher<byte> dispatcher,
 		TRequest request,
 		CancellationToken cancellationToken = default)
 	{
@@ -30,7 +30,7 @@ public static class MediatorExtensions
 		object request,
 		CancellationToken cancellationToken = default)
 	{
-		var dispatcher = (IDispatcher2<byte>)
+		var dispatcher = (IDispatcher<byte>)
 			Activator.CreateInstance(
 				_sendDefinition.MakeGenericType(
 					request.GetType()));
@@ -49,7 +49,7 @@ public static class MediatorExtensions
 
 	static async Task<TResult> RequestAsync<TRequest, TResult>(
 		this IMediator mediator,
-		IDispatcher2<TResult> dispatcher,
+		IDispatcher<TResult> dispatcher,
 		TRequest request,
 		CancellationToken cancellationToken = default)
 	{
@@ -73,7 +73,7 @@ public static class MediatorExtensions
         object request,
         CancellationToken cancellationToken = default)
 	{
-		var dispatcher = (IDispatcher2<TResult>)
+		var dispatcher = (IDispatcher<TResult>)
 			Activator.CreateInstance(
 				_requestDefinition.MakeGenericType(
 					request.GetType(), typeof(TResult)));

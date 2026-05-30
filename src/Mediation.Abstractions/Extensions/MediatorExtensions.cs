@@ -16,7 +16,7 @@ public static class MediatorExtensions {
 
 	public static IAsyncEnumerable<TRecord> Dispatch<TRecord>(
 		this IMediator mediator,
-		IDispatcher2<TRecord> dispatcher,
+		IDispatcher<TRecord> dispatcher,
 		object input,
 		CancellationToken cancellationToken) =>
 		mediator.Dispatch(

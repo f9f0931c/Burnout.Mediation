@@ -14,7 +14,7 @@ public static class MediatorExtensions
 
 	static async Task PublishAsync(
 		this IMediator mediator,
-		IDispatcher2<byte> dispatcher,
+		IDispatcher<byte> dispatcher,
 		object message,
 		CancellationToken cancellationToken = default)
 	{
@@ -32,7 +32,7 @@ public static class MediatorExtensions
 		object message,
 		CancellationToken cancellationToken = default)
 	{
-		var dispatcher = (IDispatcher2<byte>)
+		var dispatcher = (IDispatcher<byte>)
 			Activator.CreateInstance(
 				_definition.MakeGenericType(message.GetType()));
 
@@ -66,7 +66,7 @@ class PipelineMediator : IMediator
         Mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
     }
 
-    public IAsyncEnumerable<TRecord> Dispatch<TRecord>(Func<IServiceProvider, IDispatcher2<TRecord>> factory, object input, CancellationToken cancellationToken)
+    public IAsyncEnumerable<TRecord> Dispatch<TRecord>(Func<IServiceProvider, IDispatcher<TRecord>> factory, object input, CancellationToken cancellationToken)
     {
 		return Mediator.Dispatch(
             new PipelineDispatcher<TRecord>(factory), 

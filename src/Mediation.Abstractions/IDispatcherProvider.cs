@@ -7,5 +7,5 @@ namespace Burnout.Mediation;
 
 public interface IDispatcherProvider<TRecord>
 {
-    IDispatcher2<TRecord> Create(IServiceProvider services);
+    IDispatcher<TRecord> Create(IServiceProvider services);
 }

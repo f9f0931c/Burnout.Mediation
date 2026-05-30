@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Burnout.Mediation.Notifications;
 
-class NotificationDispatcher<TMessage> : IDispatcher2<byte>
+class NotificationDispatcher<TMessage> : IDispatcher<byte>
 {
     public async IAsyncEnumerable<byte> Dispatch(IServiceProvider services, object input, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
@@ -55,12 +55,12 @@ class LoggingStep<T> : IPipelineStep2<T>
     }
 }
 
-class PipelineDispatcher<T> : IDispatcher2<T>
+class PipelineDispatcher<T> : IDispatcher<T>
 {
-    readonly Func<IServiceProvider, IDispatcher2<T>> _factory;
+    readonly Func<IServiceProvider, IDispatcher<T>> _factory;
 
     public PipelineDispatcher(
-        Func<IServiceProvider, IDispatcher2<T>> factory)
+        Func<IServiceProvider, IDispatcher<T>> factory)
     {
         _factory = factory ?? throw new ArgumentNullException(nameof(factory));
     }

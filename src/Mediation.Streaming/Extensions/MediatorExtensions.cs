@@ -14,7 +14,7 @@ public static class MediatorExtensions
         object request,
         CancellationToken cancellationToken = default) =>
         mediator.Dispatch(
-            (IDispatcher2<TResult>)
+            (IDispatcher<TResult>)
             Activator.CreateInstance(
                 _definition.MakeGenericType(
                     request.GetType(),

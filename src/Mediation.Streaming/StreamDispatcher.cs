@@ -4,7 +4,7 @@ using System.Threading;
 
 namespace Burnout.Mediation.Streaming;
 
-class StreamDispatcher<TRequest, TRecord> : IDispatcher2<TRecord>
+class StreamDispatcher<TRequest, TRecord> : IDispatcher<TRecord>
 {
     public IAsyncEnumerable<TRecord> Dispatch(
         IServiceProvider services,

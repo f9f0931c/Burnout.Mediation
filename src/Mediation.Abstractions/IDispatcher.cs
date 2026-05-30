@@ -4,7 +4,7 @@ using System.Threading;
 
 namespace Burnout.Mediation;
 
-public interface IDispatcher2<TResult>
+public interface IDispatcher<TResult>
 {
 	IAsyncEnumerable<TResult> Dispatch(IServiceProvider services, object input, CancellationToken cancellationToken);
 }

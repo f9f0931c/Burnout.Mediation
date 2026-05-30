@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Burnout.Mediation.Requests; 
 
-class RequestDispatcher<TRequest> : IDispatcher2<byte>
+class RequestDispatcher<TRequest> : IDispatcher<byte>
 {
     public async IAsyncEnumerable<byte> Dispatch(IServiceProvider services, object input, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
@@ -21,7 +21,7 @@ class RequestDispatcher<TRequest> : IDispatcher2<byte>
     }
 }
 
-class RequestDispatcher<TRequest, TResult> : IDispatcher2<TResult>
+class RequestDispatcher<TRequest, TResult> : IDispatcher<TResult>
 {
     public async IAsyncEnumerable<TResult> Dispatch(IServiceProvider services, object input, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
